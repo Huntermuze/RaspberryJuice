@@ -214,6 +214,13 @@ class CmdPlayer(CmdPositioner):
         """Clear the players events"""
         self.conn.send(b"player.events.clear")
 
+    #Custom implementation - Huntermuze
+    def getBiome(self):
+        """Gets the biome that the player is currently within."""
+        x, y, z = self.getTilePos()
+        playerTilePos = (x, y - 1, z)
+        return str(self.conn.sendReceive(b"player.getBiome", playerTilePos))
+
 class CmdCamera:
     def __init__(self, connection):
         self.conn = connection
