@@ -303,6 +303,22 @@ class Minecraft:
         s = self.conn.sendReceive(b"world.getBlocks", intFloor(args))
         return map(int, s.split(","))
 
+    #Custom implementation - Huntermuze
+    def removeBlocksInRegion(self, *args):
+        """removeBlocksInRegion (x1, y1, z1, x2, y2, z2, [types])"""
+        self.conn.send(b"world.removeBlocksInRegion", intFloor(args))
+
+    #Custom implementation - Huntermuze
+    def getHighestAndLowestYInRegion(self, *args):
+        """getHighestAndLowestYInRegion (x1, z1, x2, z2) => [highest_y: int, lowest_y: int]"""
+        highest_and_lowest_y = self.conn.sendReceive(b"world.getHighestAndLowestYInRegion", intFloor(args))
+        return list(map(int, highest_and_lowest_y.split(",")))
+
+    #Custom implementation - Huntermuze
+    def getLowestYInLine(self, *args):
+        """getLowestYInLine (x1, y1, z1, z2) => [y:int]"""
+        return int(self.conn.sendReceive(b"world.getLowestYInLine", intFloor(args)))
+
     def setBlock(self, *args):
         """Set block (x,y,z,id,[data])"""
         self.conn.send(b"world.setBlock", intFloor(args))

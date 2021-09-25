@@ -1,9 +1,6 @@
 package net.zhuoweizhang.raspberryjuice;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Server;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
@@ -17,6 +14,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -163,6 +161,60 @@ public class RemoteSession {
 			World world = origin.getWorld();
 
 			switch (c) {
+				// world.removeBlocksInRegion
+				case "world.removeBlocksInRegion" -> {
+					int[] blocks_to_remove = parseBlockIds(Arrays.copyOfRange(args, 6, args.length));
+					System.out.println(Arrays.toString(blocks_to_remove));
+
+					for (int x = Integer.parseInt(args[0]); x <= Integer.parseInt(args[3]); ++x) {
+						for (int y = Integer.parseInt(args[1]); y <= Integer.parseInt(args[4]); ++y) {
+							for (int z = Integer.parseInt(args[2]); z <= Integer.parseInt(args[5]); ++z) {
+
+								Block block = world.getBlockAt(x, y, z);
+
+								if (iterateAndCheckIfInside(blocks_to_remove, block.getType().getId())) {
+									System.out.println("REMOVED BLOCK!");
+									block.setType(Material.AIR);
+								}
+							}
+						}
+					}
+				}
+				// world.getHighestAndLowestYInRegion.
+				case "world.getHighestAndLowestYInRegion" -> {
+					int highestY = -1;
+					int lowestY  = 100;
+
+					for (int x = Integer.parseInt(args[0]); x <= Integer.parseInt(args[2]); ++x) {
+						for (int z = Integer.parseInt(args[1]); z <= Integer.parseInt(args[3]); ++z) {
+							int currentY = world.getHighestBlockYAt(x, z);
+
+							if (currentY > highestY) {
+								highestY = currentY;
+							}
+
+							if (currentY < lowestY) {
+								lowestY = currentY;
+							}
+						}
+					}
+
+					System.out.println("LOG >> FINAL highestY = " + highestY + " LOWEST " + lowestY);
+
+					send(highestY + "," + lowestY);
+				}
+				// world.getLowestYInLine
+				case "world.getLowestYInLine" -> {
+					int lowest = Integer.parseInt(args[1]);
+
+					for (int k = Integer.parseInt(args[2]); k <= Integer.parseInt(args[3]); ++k) {
+						int currentY = world.getHighestBlockYAt(Integer.parseInt(args[0]), k);
+
+						if (currentY < lowest) lowest = currentY;
+					}
+
+					send(lowest);
+				}
 				// world.getBlock
 				case "world.getBlock" -> {
 					Location loc = parseRelativeBlockLocation(args[0], args[1], args[2]);
@@ -682,11 +734,31 @@ public class RemoteSession {
 	}
 
 	private void updateBlock(Block thisBlock, int blockType, byte blockData) {
-		// check to see if the block is different - otherwise leave it 
+		// check to see if the block is different - otherwise leave it
 		if ((thisBlock.getTypeId() != blockType) || (thisBlock.getData() != blockData)) {
 			thisBlock.setTypeIdAndData(blockType, blockData, true);
 		}
 	}
+
+//	// FIXME - try this, if it doesn't work, revert back to the old way.
+//	public static void setBlockFast(World world, int x, int y, int z, int blockId, byte data) {
+//		if (y > 255) return;
+//
+//		net.minecraft.server.v1_12_R1.World w = ((CraftWorld) world).getHandle();
+//		net.minecraft.server.v1_12_R1.Chunk chunk = w.getChunkAt(x >> 4, z >> 4);
+//		BlockPosition bp = new BlockPosition(x, y, z);
+//
+//		IBlockData ibd = net.minecraft.server.v1_12_R1.Block.getByCombinedId(blockId + (data << 12));
+//		ChunkSection chunksection = chunk.getSections()[bp.getY() >> 4];
+//
+//		if (chunksection == null) {
+//			chunksection = chunk.getSections()[bp.getY() >> 4] = new ChunkSection(bp.getY() >> 4 << 4, !chunk.getWorld().worldProvider.d());
+//		}
+//
+//		chunksection.setType(bp.getX() & 15, bp.getY() & 15, bp.getZ() & 15, ibd);
+//
+//		w.notify(bp, ibd, chunk.getBlockData(bp), data);
+//	}
 
 	// gets the current player
 	public Player getCurrentPlayer() {
@@ -765,6 +837,22 @@ public class RemoteSession {
 
 	private Location parseLocation(World world, int x, int y, int z, int originX, int originY, int originZ) {
 		return new Location(world, originX + x, originY + y, originZ + z);
+	}
+
+	private int[] parseBlockIds(String[] args) {
+		int[] temp = new int[args.length];
+
+		for (int i = 0; i < args.length; ++i) temp[i] = Integer.parseInt(args[i]);
+
+		return temp;
+	}
+
+	private boolean iterateAndCheckIfInside(int[] array, int criterion) {
+		for (int j : array) {
+			if (criterion == j) return true;
+		}
+
+		return false;
 	}
 
 	private double getDistance(Entity ent1, Entity ent2) {
@@ -932,6 +1020,7 @@ public class RemoteSession {
 	}
 
 	public void send(Object a) {
+		System.out.println("LOG >> SENDING: " + a);
 		send(a.toString());
 	}
 
